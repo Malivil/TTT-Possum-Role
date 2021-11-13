@@ -146,6 +146,7 @@ if SERVER then
         ent:PossumPlayDead()
     end)
 
+    -- Clear possum data when it's no longer relevant
     local function ClearPossumData(ply)
         ply:SetNWBool("PossumDisguiseActive", false)
         ply:SetNWBool("PossumDisguiseRunning", false)
@@ -176,6 +177,7 @@ if CLIENT then
         weight = 600
     })
 
+    -- Show a message when the death disguiser is enabled
     hook.Add("TTTHUDInfoPaint", "Possum_TTTHUDInfoPaint", function(client, label_left, label_top)
         if not IsPlayer(client) or not client:Alive() or client:IsSpec() or not client:IsPossum() then return end
         if not client:GetNWBool("PossumDisguiseActive", false) then return end
@@ -217,6 +219,20 @@ if CLIENT then
             HUD:PaintBar(8, x, y, width, height, colors, 1 - (diff / max))
             draw.SimpleText(LANG.GetTranslation("psm_disguiser_charge"), "PSMTimeLeft", ScrW() / 2, y + 1, COLOR_WHITE, TEXT_ALIGN_CENTER)
             draw.SimpleText(LANG.GetParamTranslation("psm_disguiser_charge_info", { secondaryfire = Key("+attack2", "MOUSE2")}), "TabLarge", ScrW() / 2, margin, COLOR_WHITE, TEXT_ALIGN_CENTER)
+        end
+    end)
+
+    -- Tutorial
+    hook.Add("TTTTutorialRoleText", "Possum_TTTTutorialRoleText", function(role, titleLabel)
+        if role == ROLE_POSSUM then
+            local roleColor = ROLE_COLORS[ROLE_INNOCENT]
+            local html = "The " .. ROLE_STRINGS[ROLE_POSSUM] .. " is a member of the <span style='color: rgb(" .. roleColor.r .. ", " .. roleColor.g .. ", " .. roleColor.b .. ")'>innocent team</span> whose goal is to protect themselves and help their team win."
+
+            html = html .. "<span style='display: block; margin-top: 10px;'>Use the <span style='color: rgb(" .. roleColor.r .. ", " .. roleColor.g .. ", " .. roleColor.b .. ")'>" .. LANG.GetTranslation("psm_disguiser") .. "</span> to prepare yourself to play dead.</span>"
+            html = html .. "<span style='display: block; margin-top: 10px;'>Once the " .. LANG.GetTranslation("psm_disguiser") .. " <span style='color: rgb(" .. roleColor.r .. ", " .. roleColor.g .. ", " .. roleColor.b .. ")'>is enabled</span>, you will automatically play dead when you take damage.</span>"
+            html = html .. "<span style='display: block; margin-top: 10px;'>You are only able to <span style='color: rgb(" .. roleColor.r .. ", " .. roleColor.g .. ", " .. roleColor.b .. ")'>play dead for a limited time</span>, so be careful!</span>"
+
+            return html
         end
     end)
 end
