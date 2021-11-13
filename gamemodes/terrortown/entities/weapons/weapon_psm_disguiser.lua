@@ -60,13 +60,30 @@ function SWEP:Deploy()
 end
 
 function SWEP:PrimaryAttack()
+    if self:GetNextPrimaryFire() > CurTime() then return end
+    self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
+
     local owner = self:GetOwner()
     if owner:GetNWBool("PossumDisguiseRunning", false) then return end
 
     self:SendWeaponAnim(ACT_SLAM_DETONATOR_DETONATE)
 
-    -- Toggle state
-    owner:SetNWBool("PossumDisguiseActive", not owner:GetNWBool("PossumDisguiseActive", false))
+    if SERVER then
+        -- Toggle state
+        owner:SetNWBool("PossumDisguiseActive", not owner:GetNWBool("PossumDisguiseActive", false))
+    end
+end
+
+function SWEP:SecondaryAttack()
+    if CLIENT then return end
+
+    if self:GetNextPrimaryFire() > CurTime() then return end
+    self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
+
+    local owner = self:GetOwner()
+    if owner:GetNWBool("PossumDisguiseRunning", false) then
+        owner:PossumRevive()
+    end
 end
 
 function SWEP:Think()
@@ -80,7 +97,7 @@ function SWEP:Think()
         local clip = self:Clip1()
         -- If they run out of charge, disable the disguiser
         if running and clip == 0 then
-            owner:SetNWBool("PossumDisguiseRunning", false)
+            owner:PossumRevive()
         else
             if running then
                 clip = clip - 1

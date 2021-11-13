@@ -22,6 +22,7 @@ ROLE.translations = {
     ["english"] = {
         ["psm_disguiser"] = "Death Disguiser",
         ["psm_disguiser_charge"] = "DISGUISE REMAINING",
+        ["psm_disguiser_charge_info"] = "Press {secondaryfire} to stop playing dead early",
         ["psm_disguiser_hud"] = "Death disguiser active",
         ["psm_disguiser_help_pri"] = "Use {primaryfire} to toggle the device on and off",
         ["psm_disguiser_help_sec"] = "While the device is active, taking damage will cause you to play dead"
@@ -45,29 +46,126 @@ RegisterRole(ROLE)
 if SERVER then
     AddCSLuaFile()
 
+    local plymeta = FindMetaTable("Player")
+    function plymeta:PossumPlayDead()
+        if IsValid(self.possumRagdoll) then return end
+
+        self:SetNWBool("PossumDisguiseRunning", true)
+        self:SelectWeapon("weapon_psm_disguiser")
+
+        -- Create ragdoll and lock their view
+        local ragdoll = ents.Create("prop_ragdoll")
+        ragdoll.ragdolledPly = self
+        ragdoll.playerHealth = self:Health()
+
+        ragdoll:SetPos(self:GetPos())
+        local velocity = self:GetVelocity()
+        ragdoll:SetAngles(self:GetAngles())
+        ragdoll:SetModel(self:GetModel())
+        ragdoll:Spawn()
+        ragdoll:Activate()
+
+        -- So their player ent will match up (position-wise) with where their ragdoll is.
+        self:SetParent(ragdoll)
+        -- Set velocity for each piece of the ragdoll
+        for i = 1, ragdoll:GetPhysicsObjectCount() do
+            local phys_obj = ragdoll:GetPhysicsObjectNum(i)
+            if phys_obj then
+                phys_obj:SetVelocity(velocity)
+            end
+        end
+
+        self.possumRagdoll = ragdoll
+        self:Spectate(OBS_MODE_CHASE)
+        self:SpectateEntity(ragdoll)
+
+        -- The diguiser stays in their hand so hide it from view
+        self:DrawViewModel(false)
+        self:DrawWorldModel(false)
+    end
+
+    function plymeta:PossumRevive()
+        if not IsValid(self.possumRagdoll) then return end
+
+        self:SetNWBool("PossumDisguiseRunning", false)
+
+        -- Unragdoll
+        self:SpectateEntity(nil)
+        self:UnSpectate()
+        self:Spawn()
+        self:SetPos(self.possumRagdoll:GetPos())
+        self:SetVelocity(self.possumRagdoll:GetVelocity())
+        local yaw = self.possumRagdoll:GetAngles().yaw
+		self:SetAngles(Angle(0, yaw, 0))
+        self:SetModel(self.possumRagdoll:GetModel())
+
+        -- Let weapons be seen again
+        self:DrawViewModel(true)
+        self:DrawWorldModel(true)
+
+        SafeRemoveEntity(self.possumRagdoll)
+        self.possumRagdoll = nil
+    end
+
+    local function TransferRagdollDamage(rag, dmginfo)
+        if not IsRagdoll(rag) then return end
+        local ply = rag.ragdolledPly
+        if not IsPlayer(ply) or not ply:Alive() or ply:IsSpec() then return end
+
+        -- Keep track of how much health they have left
+        local dmg = dmginfo:GetDamage()
+        rag.playerHealth = rag.playerHealth - dmg
+
+        -- Kill the player if they run out of health
+        if rag.playerHealth <= 0 then
+            ply:PossumRevive()
+            ply:Kill()
+
+            -- Update some properties of the created ragdoll to give some information on whole killed them
+            local body = ply.server_ragdoll or ply:GetRagdollEntity()
+            body.dmgtype = dmginfo:GetDamageType()
+            body.was_headshot = dmginfo:IsBulletDamage()
+
+            local wep = util.WeaponFromDamage(dmginfo)
+            body.dmgwep = IsValid(wep) and wep:GetClass() or ""
+        end
+    end
+
     hook.Add("EntityTakeDamage", "Possum_EntityTakeDamage", function(ent, dmginfo)
+        -- Transfer possum damage from the ragdoll to the real player
+        if IsRagdoll(ent) then
+            TransferRagdollDamage(ent, dmginfo)
+            return
+        end
         if not IsPlayer(ent) or not ent:Alive() or ent:IsSpec() or not ent:IsPossum() then return end
         if not ent:GetNWBool("PossumDisguiseActive", false) then return end
 
         local att = dmginfo:GetAttacker()
         if not IsPlayer(att) or att == ent then return end
 
-        -- Play dead
-        ent:SetNWBool("PossumDisguiseRunning", true)
-        ent:SelectWeapon("weapon_psm_disguiser")
-        -- TODO: Ragdoll, lock view
+        ent:PossumPlayDead()
     end)
+
+    local function ClearPossumData(ply)
+        ply:SetNWBool("PossumDisguiseActive", false)
+        ply:SetNWBool("PossumDisguiseRunning", false)
+        SafeRemoveEntity(ply.possumRagdoll)
+        ply.possumRagdoll = nil
+    end
 
     hook.Add("TTTPrepareRound", "Possum_PrepareRound", function()
         for _, v in pairs(player.GetAll()) do
-            v:SetNWBool("PossumDisguiseActive", false)
-            v:SetNWBool("PossumDisguiseRunning", false)
+            ClearPossumData(v)
         end
     end)
 
     hook.Add("TTTPlayerRoleChanged", "Possum_TTTPlayerRoleChanged", function(ply, oldRole, newRole)
-        ply:SetNWBool("PossumDisguiseActive", false)
-        ply:SetNWBool("PossumDisguiseRunning", false)
+        ClearPossumData(ply)
+    end)
+
+    hook.Add("PlayerDeath", "Bodysnatcher_KillCheck_PlayerDeath", function(victim, infl, attacker)
+        if not IsPlayer(victim) or not victim:IsPossum() then return end
+        ClearPossumData(victim)
     end)
 end
 
@@ -118,6 +216,7 @@ if CLIENT then
         if diff > 0 then
             HUD:PaintBar(8, x, y, width, height, colors, 1 - (diff / max))
             draw.SimpleText(LANG.GetTranslation("psm_disguiser_charge"), "PSMTimeLeft", ScrW() / 2, y + 1, COLOR_WHITE, TEXT_ALIGN_CENTER)
+            draw.SimpleText(LANG.GetParamTranslation("psm_disguiser_charge_info", { secondaryfire = Key("+attack2", "MOUSE2")}), "TabLarge", ScrW() / 2, margin, COLOR_WHITE, TEXT_ALIGN_CENTER)
         end
     end)
 end
