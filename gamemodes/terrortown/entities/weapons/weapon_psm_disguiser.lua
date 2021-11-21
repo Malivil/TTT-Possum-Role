@@ -23,7 +23,7 @@ SWEP.UseHands               = true
 SWEP.LimitedStock           = true
 SWEP.AmmoEnt                = nil
 
-SWEP.Primary.Delay          = 1
+SWEP.Primary.Delay          = 0.25
 SWEP.Primary.Automatic      = false
 SWEP.Primary.Cone           = 0
 SWEP.Primary.Ammo           = nil
@@ -70,7 +70,16 @@ function SWEP:PrimaryAttack()
 
     if SERVER then
         -- Toggle state
-        owner:SetNWBool("PossumDisguiseActive", not owner:GetNWBool("PossumDisguiseActive", false))
+        local active = not owner:GetNWBool("PossumDisguiseActive", false)
+        owner:SetNWBool("PossumDisguiseActive", active)
+
+        local message = "Your disguiser has been "
+        if not active then
+            message = message .. "de-"
+        end
+        message = message .. "activated."
+        owner:PrintMessage(HUD_PRINTCENTER, message)
+        owner:PrintMessage(HUD_PRINTTALK, message)
     end
 end
 
