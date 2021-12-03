@@ -121,3 +121,7 @@ function SWEP:Think()
         end
     end
 end
+
+function SWEP:OnDrop()
+    self:Remove()
+end
