@@ -92,6 +92,7 @@ if SERVER then
         -- Unragdoll
         self:SpectateEntity(nil)
         self:UnSpectate()
+        self:SetParent()
         self:Spawn()
         self:SetPos(self.possumRagdoll:GetPos())
         self:SetVelocity(self.possumRagdoll:GetVelocity())
@@ -103,6 +104,12 @@ if SERVER then
         self:DrawViewModel(true)
         self:DrawWorldModel(true)
 
+        local newhealth = self.possumRagdoll.playerHealth
+        if newhealth <= 0 then
+            newhealth = 1
+        end
+        self:SetHealth(newhealth)
+
         SafeRemoveEntity(self.possumRagdoll)
         self.possumRagdoll = nil
     end
@@ -113,21 +120,33 @@ if SERVER then
         if not IsPlayer(ply) or not ply:Alive() or ply:IsSpec() then return end
 
         -- Keep track of how much health they have left
-        local dmg = dmginfo:GetDamage()
-        rag.playerHealth = rag.playerHealth - dmg
+        local damage = dmginfo:GetDamage()
+        rag.playerHealth = rag.playerHealth - damage
 
         -- Kill the player if they run out of health
         if rag.playerHealth <= 0 then
             ply:PossumRevive()
-            ply:Kill()
+            -- Disable the disguise so they don't just ragdoll again
+            ply:SetNWBool("PossumDisguiseActive", false)
 
-            -- Update some properties of the created ragdoll to give some information on whole killed them
-            local body = ply.server_ragdoll or ply:GetRagdollEntity()
-            body.dmgtype = dmginfo:GetDamageType()
-            body.was_headshot = dmginfo:IsBulletDamage()
+            local att = dmginfo:GetAttacker()
+            local inflictor = dmginfo:GetInflictor()
+            if not IsValid(inflictor) then
+                inflictor = att
+            end
+            local dmg_type = dmginfo:GetDamageType()
 
-            local wep = util.WeaponFromDamage(dmginfo)
-            body.dmgwep = IsValid(wep) and wep:GetClass() or ""
+            -- Use TakeDamage instead of Kill so it properly applies karma
+            local dmg = DamageInfo()
+            dmg:SetDamageType(dmg_type)
+            dmg:SetAttacker(att)
+            dmg:SetInflictor(inflictor)
+            -- Use 10 so damage scaling doesn't mess with it. The worse damage factor (0.1) will still deal 1 damage after scaling a 10 down
+            -- Karma ignores excess damage anyway
+            dmg:SetDamage(10)
+            dmg:SetDamageForce(Vector(0, 0, 1))
+
+            ply:TakeDamageInfo(dmg)
         end
     end
 
@@ -135,6 +154,9 @@ if SERVER then
         -- Transfer possum damage from the ragdoll to the real player
         if IsRagdoll(ent) then
             TransferRagdollDamage(ent, dmginfo)
+            return
+        elseif IsPlayer(ent) and ent:GetNWBool("PossumDisguiseRunning", false) then
+            TransferRagdollDamage(ent.possumRagdoll, dmginfo)
             return
         end
         if not IsPlayer(ent) or not ent:Alive() or ent:IsSpec() or not ent:IsPossum() then return end
