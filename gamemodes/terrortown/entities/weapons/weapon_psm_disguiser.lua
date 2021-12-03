@@ -17,6 +17,7 @@ SWEP.AutoSpawnable          = false
 SWEP.HoldType               = "slam"
 SWEP.Kind                   = WEAPON_ROLE
 
+SWEP.DeploySpeed            = 4
 SWEP.AllowDrop              = false
 SWEP.NoSights               = true
 SWEP.UseHands               = true
