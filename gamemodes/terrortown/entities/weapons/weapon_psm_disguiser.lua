@@ -51,6 +51,23 @@ end
 function SWEP:Equip()
 end
 
+-- If we're switching from a TFA weapon to the disguiser while it's running, JUST DO IT!
+-- The holster animation causes a delay where the client is not allowed to switch weapons
+-- This means if we tell the user to select a weapon and then block the user from switching weapons immediately after,
+-- the holster animation delay will cause the player to not select the weapon we told them to
+hook.Add("TFA_PreHolster", "PossumTFAPreHolster", function(wep, target)
+    if not IsValid(wep) or not IsValid(target) then return end
+
+    local owner = wep:GetOwner()
+    if not IsPlayer(owner) or not owner:IsPossum() then return end
+
+    local weapon = WEPS.GetClass(target)
+    local running = owner:GetNWBool("PossumDisguiseRunning", false)
+    if running and weapon == "weapon_psm_disguiser" then
+        return true
+    end
+end)
+
 function SWEP:Holster()
     return not self:GetOwner():GetNWBool("PossumDisguiseRunning", false)
 end
