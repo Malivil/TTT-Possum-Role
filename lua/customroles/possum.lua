@@ -57,6 +57,8 @@ if SERVER then
         local ragdoll = ents.Create("prop_ragdoll")
         ragdoll.ragdolledPly = self
         ragdoll.playerHealth = self:Health()
+        -- Don't let the red matter bomb destroy this ragdoll
+        ragdoll.WYOZIBHDontEat = true
 
         ragdoll:SetPos(self:GetPos())
         local velocity = self:GetVelocity()
@@ -109,6 +111,7 @@ if SERVER then
             newhealth = 1
         end
         self:SetHealth(newhealth)
+        SetRoleMaxHealth(self)
 
         SafeRemoveEntity(self.possumRagdoll)
         self.possumRagdoll = nil
@@ -147,6 +150,8 @@ if SERVER then
             dmg:SetDamageForce(Vector(0, 0, 1))
 
             ply:TakeDamageInfo(dmg)
+        else
+            ply:SetHealth(rag.playerHealth)
         end
     end
 
