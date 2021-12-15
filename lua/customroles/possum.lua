@@ -156,6 +156,12 @@ if SERVER then
     end
 
     hook.Add("EntityTakeDamage", "Possum_EntityTakeDamage", function(ent, dmginfo)
+        local att = dmginfo:GetAttacker()
+        if not IsPlayer(att) or att == ent or att == ent.ragdolledPly then return end
+
+        -- Don't transfer damage from jester-like players
+        if att:ShouldActLikeJester() then return end
+
         -- Transfer possum damage from the ragdoll to the real player
         if IsRagdoll(ent) then
             TransferRagdollDamage(ent, dmginfo)
@@ -164,11 +170,9 @@ if SERVER then
             TransferRagdollDamage(ent.possumRagdoll, dmginfo)
             return
         end
+
         if not IsPlayer(ent) or not ent:Alive() or ent:IsSpec() or not ent:IsPossum() then return end
         if not ent:GetNWBool("PossumDisguiseActive", false) then return end
-
-        local att = dmginfo:GetAttacker()
-        if not IsPlayer(att) or att == ent then return end
 
         ent:PossumPlayDead()
     end)
