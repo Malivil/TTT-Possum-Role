@@ -155,26 +155,32 @@ if SERVER then
         end
     end
 
-    hook.Add("EntityTakeDamage", "Possum_EntityTakeDamage", function(ent, dmginfo)
+    hook.Add("PostEntityTakeDamage", "Possum_PostEntityTakeDamage", function(ent, dmginfo, taken)
         local att = dmginfo:GetAttacker()
-        if not IsPlayer(att) or att == ent or att == ent.ragdolledPly then return end
+        if not IsPlayer(att) then return end
 
         -- Don't transfer damage from jester-like players
         if att:ShouldActLikeJester() then return end
 
-        -- Transfer possum damage from the ragdoll to the real player
+        local ply, rag
         if IsRagdoll(ent) then
-            TransferRagdollDamage(ent, dmginfo)
-            return
-        elseif IsPlayer(ent) and ent:GetNWBool("PossumDisguiseRunning", false) then
-            TransferRagdollDamage(ent.possumRagdoll, dmginfo)
-            return
+            rag = ent
+            ply = ent.ragdolledPly
+        elseif IsPlayer(ent) then
+            ply = ent
+            rag = ent.possumRagdoll
         end
 
-        if not IsPlayer(ent) or not ent:Alive() or ent:IsSpec() or not ent:IsPossum() then return end
-        if not ent:GetNWBool("PossumDisguiseActive", false) then return end
+        if not IsPlayer(ply) or not ply:Alive() or ply:IsSpec() or not ply:IsPossum() then return end
+        if not ply:GetNWBool("PossumDisguiseActive", false) then return end
+        if att == ply then return end
 
-        ent:PossumPlayDead()
+        -- Transfer possum damage from the ragdoll to the real player
+        if IsRagdoll(rag) then
+            TransferRagdollDamage(rag, dmginfo)
+        else
+            ply:PossumPlayDead()
+        end
     end)
 
     -- Clear possum data when it's no longer relevant
