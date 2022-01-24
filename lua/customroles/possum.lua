@@ -60,12 +60,22 @@ if SERVER then
         -- Don't let the red matter bomb destroy this ragdoll
         ragdoll.WYOZIBHDontEat = true
 
-        ragdoll:SetPos(self:GetPos())
         local velocity = self:GetVelocity()
-        ragdoll:SetAngles(self:GetAngles())
+
+        ragdoll:SetPos(self:GetPos())
         ragdoll:SetModel(self:GetModel())
+        ragdoll:SetSkin(self:GetSkin())
+        for _, value in pairs(self:GetBodyGroups()) do
+            ragdoll:SetBodygroup(value.id, self:GetBodygroup(value.id))
+        end
+        ragdoll:SetAngles(self:GetAngles())
+        ragdoll:SetColor(self:GetColor())
+
         ragdoll:Spawn()
         ragdoll:Activate()
+
+        local rag_collide = GetConVar("ttt_ragdoll_collide")
+        ragdoll:SetCollisionGroup(rag_collide:GetBool() and COLLISION_GROUP_WEAPON or COLLISION_GROUP_DEBRIS_TRIGGER)
 
         -- So their player ent will match up (position-wise) with where their ragdoll is.
         self:SetParent(ragdoll)
