@@ -263,7 +263,7 @@ if CLIENT then
         local max = weap:GetMaxClip1()
         local diff = max - weap:Clip1()
         if diff > 0 then
-            HUD:PaintBar(8, x, y, width, height, colors, 1 - (diff / max))
+            CRHUD:PaintBar(8, x, y, width, height, colors, 1 - (diff / max))
             draw.SimpleText(LANG.GetTranslation("psm_disguiser_charge"), "PSMTimeLeft", ScrW() / 2, y + 1, COLOR_WHITE, TEXT_ALIGN_CENTER)
             draw.SimpleText(LANG.GetParamTranslation("psm_disguiser_charge_info", { secondaryfire = Key("+attack2", "MOUSE2")}), "TabLarge", ScrW() / 2, margin, COLOR_WHITE, TEXT_ALIGN_CENTER)
         end
