@@ -57,11 +57,11 @@ if SERVER then
         local ragdoll = ents.Create("prop_ragdoll")
         ragdoll.ragdolledPly = self
         ragdoll.playerHealth = self:Health()
+        ragdoll.playerColor = self:GetPlayerColor()
         -- Don't let the red matter bomb destroy this ragdoll
         ragdoll.WYOZIBHDontEat = true
 
         local velocity = self:GetVelocity()
-
         ragdoll:SetPos(self:GetPos())
         ragdoll:SetModel(self:GetModel())
         ragdoll:SetSkin(self:GetSkin())
@@ -70,7 +70,7 @@ if SERVER then
         end
         ragdoll:SetAngles(self:GetAngles())
         ragdoll:SetColor(self:GetColor())
-
+        CORPSE.SetPlayerNick(ragdoll, self)
         ragdoll:Spawn()
         ragdoll:Activate()
 
@@ -111,6 +111,7 @@ if SERVER then
         local yaw = self.possumRagdoll:GetAngles().yaw
 		self:SetAngles(Angle(0, yaw, 0))
         self:SetModel(self.possumRagdoll:GetModel())
+        self:SetPlayerColor(self.possumRagdoll.playerColor)
 
         -- Let weapons be seen again
         self:DrawViewModel(true)
