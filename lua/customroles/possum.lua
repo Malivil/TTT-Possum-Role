@@ -226,7 +226,7 @@ if CLIENT then
     })
 
     -- Show a message when the death disguiser is enabled
-    hook.Add("TTTHUDInfoPaint", "Possum_TTTHUDInfoPaint", function(client, label_left, label_top)
+    hook.Add("TTTHUDInfoPaint", "Possum_TTTHUDInfoPaint", function(client, label_left, label_top, active_labels)
         if not IsPlayer(client) or not client:Alive() or client:IsSpec() or not client:IsPossum() then return end
         if not client:GetNWBool("PossumDisguiseActive", false) then return end
 
@@ -236,11 +236,20 @@ if CLIENT then
         text = LANG.GetTranslation("psm_disguiser_hud")
         local _, h = surface.GetTextSize(text)
 
+        -- Move this up based on how many other labels here are
+        if active_labels then
+            label_top = label_top + (20 * #active_labels)
+        else
+            label_top = label_top + 20
+        end
+
         surface.SetTextPos(label_left, ScrH() - label_top - h)
         surface.DrawText(text)
 
-        -- Move the label up for the next one
-        label_top = label_top + 20
+        -- Track that the label was added so others can position accurately
+        if active_labels then
+            table.insert(active_labels, "possum")
+        end
     end)
 
     -- Disguise time progress bar
