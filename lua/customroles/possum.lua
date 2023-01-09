@@ -212,7 +212,7 @@ if SERVER then
         ClearPossumData(ply)
     end)
 
-    hook.Add("PlayerDeath", "Bodysnatcher_KillCheck_PlayerDeath", function(victim, infl, attacker)
+    hook.Add("PlayerDeath", "Possum_KillCheck_PlayerDeath", function(victim, infl, attacker)
         if not IsPlayer(victim) or not victim:IsPossum() then return end
         ClearPossumData(victim)
     end)
@@ -278,6 +278,24 @@ if CLIENT then
             if client:GetNWBool("PossumDisguiseRunning", false) then
                 draw.SimpleText(LANG.GetParamTranslation("psm_disguiser_charge_info", { secondaryfire = Key("+attack2", "MOUSE2")}), "TabLarge", ScrW() / 2, margin, COLOR_WHITE, TEXT_ALIGN_CENTER)
             end
+        end
+    end)
+
+    hook.Add("TTTScoreGroup", "Possum_TTTScoreGroup", function(ply)
+        if not IsPlayer(ply) or not ply:IsPossum() then return end
+        if not ply:Alive() or ply:IsSpec() then return end
+
+        -- Only continue if the possum is currently pretending to be dead
+        if not ply:GetNWBool("PossumDisguiseRunning", false) then return end
+
+        local client = LocalPlayer()
+        if not IsPlayer(client) then return end
+
+        -- If the client is someone who would know that someone has died (via the scoreboard), show the possum as "missing in action" to fully disguise that
+        if client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
+            (GetGlobalBool("ttt_independents_update_scoreboard") and client:IsActiveIndependentTeam()) or
+            (GetGlobalBool("ttt_killer_update_scoreboard") and client:IsActiveKiller()) then
+            return GROUP_NOTFOUND
         end
     end)
 
