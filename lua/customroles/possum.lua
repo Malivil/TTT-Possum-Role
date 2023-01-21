@@ -101,6 +101,12 @@ if SERVER then
 
         self:SetNWBool("PossumDisguiseRunning", false)
 
+        -- Save these things in case something like a Randomat has changed them
+        -- We'll restore them later since the `Spawn` call resets these flags to their default
+        local jumpPower = self:GetJumpPower()
+        local walkSpeed = self:GetWalkSpeed()
+        local maxHealth = self:GetMaxHealth()
+
         -- Unragdoll
         self:SpectateEntity(nil)
         self:UnSpectate()
@@ -122,7 +128,11 @@ if SERVER then
             newhealth = 1
         end
         self:SetHealth(newhealth)
-        SetRoleMaxHealth(self)
+
+        -- Restore potentially-changed values
+        self:SetWalkSpeed(walkSpeed)
+        self:SetJumpPower(jumpPower)
+        self:SetMaxHealth(maxHealth)
 
         SafeRemoveEntity(self.possumRagdoll)
         self.possumRagdoll = nil
