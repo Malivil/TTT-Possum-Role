@@ -40,11 +40,18 @@ table.insert(ROLE.convars, {
     type = ROLE_CONVAR_TYPE_NUM,
     decimal = 2
 })
+table.insert(ROLE.convars, {
+    cvar = "ttt_possum_damage_resist",
+    type = ROLE_CONVAR_TYPE_NUM,
+    decimal = 2
+})
 
 RegisterRole(ROLE)
 
 if SERVER then
     AddCSLuaFile()
+
+    local possum_damage_resist = CreateConVar("ttt_possum_damage_resist", 0, FCVAR_NONE, "Playing Dead damage resistance factor", 0, 1)
 
     local plymeta = FindMetaTable("Player")
     function plymeta:PossumPlayDead()
@@ -145,6 +152,11 @@ if SERVER then
 
         -- Keep track of how much health they have left
         local damage = dmginfo:GetDamage()
+        -- Apply damage resistance, if it's enabled
+        local damage_resist = possum_damage_resist:GetFloat()
+        if damage_resist > 0 then
+            damage = damage - (damage * damage_resist)
+        end
         rag.playerHealth = rag.playerHealth - damage
 
         -- Kill the player if they run out of health
