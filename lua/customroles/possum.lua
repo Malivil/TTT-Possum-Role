@@ -320,24 +320,35 @@ if CLIENT then
         local client = LocalPlayer()
         if not IsPlayer(client) then return end
 
-        local independents_update_scoreboard = GetReplicatedValue(function()
-                return GetConVar("ttt_independents_update_scoreboard"):GetBool()
-            end,
-            function()
-                return GetGlobalBool("ttt_independents_update_scoreboard")
-            end)
-        local killer_update_scoreboard = GetReplicatedValue(function()
-                return GetConVar("ttt_killer_update_scoreboard"):GetBool()
-            end,
-            function()
-                return GetGlobalBool("ttt_killer_update_scoreboard")
-            end)
-
         -- If the client is someone who would know that someone has died (via the scoreboard), show the possum as "missing in action" to fully disguise that
-        if client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
-            (independents_update_scoreboard and client:IsActiveIndependentTeam()) or
-            (killer_update_scoreboard and client:IsActiveKiller()) then
-            return GROUP_NOTFOUND
+        if CRVersion("1.9.5") then
+            if client:IsSpec() or
+                    client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
+                    (client:IsActiveIndependentTeam() and GetConVar("ttt_" .. ROLE_STRINGS_RAW[client:GetRole()] .. "_update_scoreboard"):GetBool()) or
+                    ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
+                return GROUP_NOTFOUND
+            end
+        else
+            local independents_update_scoreboard = GetReplicatedValue(function()
+                    return GetConVar("ttt_independents_update_scoreboard"):GetBool()
+                end,
+                function()
+                    return GetGlobalBool("ttt_independents_update_scoreboard")
+                end)
+            local killer_update_scoreboard = GetReplicatedValue(function()
+                    return GetConVar("ttt_killer_update_scoreboard"):GetBool()
+                end,
+                function()
+                    return GetGlobalBool("ttt_killer_update_scoreboard")
+                end)
+
+            if client:IsSpec() or
+                    client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
+                    (independents_update_scoreboard and client:IsActiveIndependentTeam()) or
+                    (killer_update_scoreboard and client:IsActiveKiller()) or
+                    ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
+                return GROUP_NOTFOUND
+            end
         end
     end)
 
