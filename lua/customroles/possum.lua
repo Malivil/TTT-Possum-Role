@@ -189,6 +189,8 @@ if SERVER then
     end
 
     hook.Add("PostEntityTakeDamage", "Possum_PostEntityTakeDamage", function(ent, dmginfo, taken)
+        if not taken then return end
+
         local att = dmginfo:GetAttacker()
         if not IsPlayer(att) then return end
 
