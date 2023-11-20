@@ -326,7 +326,7 @@ if CLIENT then
         if CRVersion("1.9.5") then
             if client:IsSpec() or
                     client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
-                    (client:IsActiveIndependentTeam() and GetConVar("ttt_" .. ROLE_STRINGS_RAW[client:GetRole()] .. "_update_scoreboard"):GetBool()) or
+                    (client:IsActiveIndependentTeam() and cvars.Bool("ttt_" .. ROLE_STRINGS_RAW[client:GetRole()] .. "_update_scoreboard", false)) or
                     ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
                 return GROUP_NOTFOUND
             end
