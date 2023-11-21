@@ -249,13 +249,6 @@ if CLIENT then
         weight = 600
     })
 
-    local function GetReplicatedValue(onreplicated, onglobal)
-        if CRVersion("1.9.3") then
-            return onreplicated()
-        end
-        return onglobal()
-    end
-
     -- Show a message when the death disguiser is enabled
     hook.Add("TTTHUDInfoPaint", "Possum_TTTHUDInfoPaint", function(client, label_left, label_top, active_labels)
         if not IsPlayer(client) or not client:Alive() or client:IsSpec() or not client:IsPossum() then return end
@@ -323,34 +316,11 @@ if CLIENT then
         if not IsPlayer(client) then return end
 
         -- If the client is someone who would know that someone has died (via the scoreboard), show the possum as "missing in action" to fully disguise that
-        if CRVersion("1.9.5") then
-            if client:IsSpec() or
-                    client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
-                    (client:IsActiveIndependentTeam() and cvars.Bool("ttt_" .. ROLE_STRINGS_RAW[client:GetRole()] .. "_update_scoreboard", false)) or
-                    ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
-                return GROUP_NOTFOUND
-            end
-        else
-            local independents_update_scoreboard = GetReplicatedValue(function()
-                    return GetConVar("ttt_independents_update_scoreboard"):GetBool()
-                end,
-                function()
-                    return GetGlobalBool("ttt_independents_update_scoreboard")
-                end)
-            local killer_update_scoreboard = GetReplicatedValue(function()
-                    return GetConVar("ttt_killer_update_scoreboard"):GetBool()
-                end,
-                function()
-                    return GetGlobalBool("ttt_killer_update_scoreboard")
-                end)
-
-            if client:IsSpec() or
-                    client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
-                    (independents_update_scoreboard and client:IsActiveIndependentTeam()) or
-                    (killer_update_scoreboard and client:IsActiveKiller()) or
-                    ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
-                return GROUP_NOTFOUND
-            end
+        if client:IsSpec() or
+                client:IsActiveTraitorTeam() or client:IsActiveMonsterTeam() or
+                (client:IsActiveIndependentTeam() and cvars.Bool("ttt_" .. ROLE_STRINGS_RAW[client:GetRole()] .. "_update_scoreboard", false)) or
+                ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
+            return GROUP_NOTFOUND
         end
     end)
 
