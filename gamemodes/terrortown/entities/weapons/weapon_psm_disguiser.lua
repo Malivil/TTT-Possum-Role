@@ -96,8 +96,7 @@ function SWEP:PrimaryAttack()
             message = message .. "de-"
         end
         message = message .. "activated."
-        owner:PrintMessage(HUD_PRINTCENTER, message)
-        owner:PrintMessage(HUD_PRINTTALK, message)
+        owner:QueueMessage(MSG_PRINTBOTH, message)
     end
 end
 
