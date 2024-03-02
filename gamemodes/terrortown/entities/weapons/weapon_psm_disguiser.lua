@@ -77,6 +77,20 @@ function SWEP:Deploy()
     return true
 end
 
+function SWEP:SetDisguiserState(active)
+    if CLIENT then return end
+
+    local owner = self:GetOwner()
+    owner:SetNWBool("PossumDisguiseActive", active)
+
+    local message = "Your disguiser has been "
+    if not active then
+        message = message .. "de-"
+    end
+    message = message .. "activated."
+    owner:QueueMessage(MSG_PRINTBOTH, message)
+end
+
 function SWEP:PrimaryAttack()
     if self:GetNextPrimaryFire() > CurTime() then return end
     self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
@@ -89,14 +103,7 @@ function SWEP:PrimaryAttack()
     if SERVER then
         -- Toggle state
         local active = not owner:GetNWBool("PossumDisguiseActive", false)
-        owner:SetNWBool("PossumDisguiseActive", active)
-
-        local message = "Your disguiser has been "
-        if not active then
-            message = message .. "de-"
-        end
-        message = message .. "activated."
-        owner:QueueMessage(MSG_PRINTBOTH, message)
+        self:SetDisguiserState(active)
     end
 end
 
@@ -141,4 +148,19 @@ end
 
 function SWEP:OnDrop()
     self:Remove()
+end
+
+if SERVER then
+    hook.Add("TTTPlayerHandcuffed", "Possum_TTTPlayerHandcuffed", function(owner, target, time)
+        if not IsValid(target) then return end
+        if not target:IsPossum() then return end
+
+        local disguiser = target:GetWeapon("weapon_psm_disguiser")
+        if not IsValid(disguiser) then return end
+
+        disguiser:SetDisguiserState(false)
+        if target:GetNWBool("PossumDisguiseRunning", false) then
+            target:PossumRevive()
+        end
+    end)
 end
