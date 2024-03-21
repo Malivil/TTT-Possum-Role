@@ -34,9 +34,24 @@ SWEP.Primary.DefaultClip    = 100
 SWEP.Primary.Sound          = ""
 
 if SERVER then
+    SWEP.UseCount = 0
+
     CreateConVar("ttt_possum_disguiser_drain", "0.32", FCVAR_NONE, "The drain delay", 0.01, 1)
     CreateConVar("ttt_possum_disguiser_recharge", "0.16", FCVAR_NONE, "The recharge delay", 0.01, 1)
-    CreateConVar("ttt_possum_disguiser_single_use", "0", FCVAR_NONE, "Whether the disguse device can only be used once", 0, 1)
+    CreateConVar("ttt_possum_disguiser_uses", "0", FCVAR_NONE, "How many times the disguiser can be used. 0 = Infinite", 0, 1)
+end
+
+-- If this disguiser has limited uses, remove it when they've met or exceeded that amount
+local function CheckUseCount(disguiser)
+    local uses = GetConVar("ttt_possum_disguiser_uses"):GetInt()
+    disguiser.UseCount = disguiser.UseCount + 1
+
+    -- 0 = Infinite
+    if uses == 0 then return end
+
+    if disguiser.UseCount >= uses then
+        disguiser:Remove()
+    end
 end
 
 function SWEP:Initialize()
@@ -117,12 +132,7 @@ function SWEP:SecondaryAttack()
     local owner = self:GetOwner()
     if owner:GetNWBool("PossumDisguiseRunning", false) then
         owner:PossumRevive()
-
-        -- If this disguiser is single-use, remove it now that they've revived
-        local single_use = GetConVar("ttt_possum_disguiser_single_use"):GetBool()
-        if single_use then
-            self:Remove()
-        end
+        CheckUseCount(self)
     end
 end
 
@@ -138,12 +148,7 @@ function SWEP:Think()
         -- If they run out of charge, disable the disguiser
         if running and clip == 0 then
             owner:PossumRevive()
-
-            -- If this disguiser is single-use, remove it now that they've revived
-            local single_use = GetConVar("ttt_possum_disguiser_single_use"):GetBool()
-            if single_use then
-                self:Remove()
-            end
+            CheckUseCount(self)
         else
             if running then
                 clip = clip - 1
@@ -180,12 +185,7 @@ if SERVER then
         disguiser:SetDisguiserState(false)
         if target:GetNWBool("PossumDisguiseRunning", false) then
             target:PossumRevive()
-
-            -- If this disguiser is single-use, remove it now that they've revived
-            local single_use = GetConVar("ttt_possum_disguiser_single_use"):GetBool()
-            if single_use then
-                disguiser:Remove()
-            end
+            CheckUseCount(disguiser)
         end
     end)
 end
