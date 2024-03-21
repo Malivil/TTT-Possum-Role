@@ -45,6 +45,10 @@ table.insert(ROLE.convars, {
     type = ROLE_CONVAR_TYPE_NUM,
     decimal = 2
 })
+table.insert(ROLE.convars, {
+    cvar = "ttt_possum_disguiser_single_use",
+    type = ROLE_CONVAR_TYPE_BOOL
+})
 
 RegisterRole(ROLE)
 

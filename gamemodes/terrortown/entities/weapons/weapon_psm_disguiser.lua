@@ -36,6 +36,7 @@ SWEP.Primary.Sound          = ""
 if SERVER then
     CreateConVar("ttt_possum_disguiser_drain", "0.32", FCVAR_NONE, "The drain delay", 0.01, 1)
     CreateConVar("ttt_possum_disguiser_recharge", "0.16", FCVAR_NONE, "The recharge delay", 0.01, 1)
+    CreateConVar("ttt_possum_disguiser_single_use", "0", FCVAR_NONE, "Whether the disguse device can only be used once", 0, 1)
 end
 
 function SWEP:Initialize()
@@ -116,6 +117,12 @@ function SWEP:SecondaryAttack()
     local owner = self:GetOwner()
     if owner:GetNWBool("PossumDisguiseRunning", false) then
         owner:PossumRevive()
+
+        -- If this disguiser is single-use, remove it now that they've revived
+        local single_use = GetConVar("ttt_possum_disguiser_single_use"):GetBool()
+        if single_use then
+            self:Remove()
+        end
     end
 end
 
@@ -131,6 +138,12 @@ function SWEP:Think()
         -- If they run out of charge, disable the disguiser
         if running and clip == 0 then
             owner:PossumRevive()
+
+            -- If this disguiser is single-use, remove it now that they've revived
+            local single_use = GetConVar("ttt_possum_disguiser_single_use"):GetBool()
+            if single_use then
+                self:Remove()
+            end
         else
             if running then
                 clip = clip - 1
@@ -150,6 +163,12 @@ function SWEP:OnDrop()
     self:Remove()
 end
 
+function SWEP:OnRemove()
+    if CLIENT and IsValid(self:GetOwner()) and self:GetOwner() == LocalPlayer() and self:GetOwner():Alive() then
+        RunConsoleCommand("lastinv")
+    end
+end
+
 if SERVER then
     hook.Add("TTTPlayerHandcuffed", "Possum_TTTPlayerHandcuffed", function(owner, target, time)
         if not IsValid(target) then return end
@@ -161,6 +180,12 @@ if SERVER then
         disguiser:SetDisguiserState(false)
         if target:GetNWBool("PossumDisguiseRunning", false) then
             target:PossumRevive()
+
+            -- If this disguiser is single-use, remove it now that they've revived
+            local single_use = GetConVar("ttt_possum_disguiser_single_use"):GetBool()
+            if single_use then
+                disguiser:Remove()
+            end
         end
     end)
 end
