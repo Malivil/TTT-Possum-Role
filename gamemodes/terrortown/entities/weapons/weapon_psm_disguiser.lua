@@ -38,7 +38,7 @@ if SERVER then
 
     CreateConVar("ttt_possum_disguiser_drain", "0.32", FCVAR_NONE, "The drain delay", 0.01, 1)
     CreateConVar("ttt_possum_disguiser_recharge", "0.16", FCVAR_NONE, "The recharge delay", 0.01, 1)
-    CreateConVar("ttt_possum_disguiser_uses", "0", FCVAR_NONE, "How many times the disguiser can be used. 0 = Infinite", 0, 1)
+    CreateConVar("ttt_possum_disguiser_uses", "0", FCVAR_NONE, "How many times the disguiser can be used. 0 = Infinite", 0, 10)
 end
 
 -- If this disguiser has limited uses, remove it when they've met or exceeded that amount
