@@ -169,8 +169,19 @@ function SWEP:OnDrop()
 end
 
 function SWEP:OnRemove()
-    if CLIENT and IsValid(self:GetOwner()) and self:GetOwner() == LocalPlayer() and self:GetOwner():Alive() then
+    local owner = self:GetOwner()
+    if not IsPlayer(owner) then return end
+
+    if CLIENT and owner == LocalPlayer() and owner:Alive() then
         RunConsoleCommand("lastinv")
+    end
+
+    if SERVER then
+        if owner:GetNWBool("PossumDisguiseRunning", false) then
+            owner:PossumRevive()
+        end
+
+        owner:SetNWBool("PossumDisguiseActive", false)
     end
 end
 
