@@ -1,3 +1,7 @@
+local player = player
+
+local PlayerIterator = player.Iterator
+
 local ROLE = {}
 
 ROLE.nameraw = "possum"
@@ -232,7 +236,7 @@ if SERVER then
     end
 
     hook.Add("TTTPrepareRound", "Possum_PrepareRound", function()
-        for _, v in pairs(player.GetAll()) do
+        for _, v in PlayerIterator() do
             ClearPossumData(v)
         end
     end)
