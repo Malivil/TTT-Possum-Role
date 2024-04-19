@@ -14,6 +14,7 @@ ROLE.desc = [[You are {role}!
 
 Protect yourself from your enemies by
 using your device to play dead when attacked.]]
+ROLE.shortdesc = "Can play dead when attacked by activating their Death Disguiser."
 
 ROLE.team = ROLE_TEAM_INNOCENT
 
