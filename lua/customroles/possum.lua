@@ -111,6 +111,16 @@ if SERVER then
         -- The diguiser stays in their hand so hide it from view
         self:DrawViewModel(false)
         self:DrawWorldModel(false)
+
+        -- If there is a barnacle holding this player, tell it to let go
+        -- We do this so the player doesn't get stuck in a partial capture state
+        -- where they are taking damage from the barnacle even they have revived
+        -- and moved away
+        for _, b in ipairs(ents.FindByClass("npc_barnacle")) do
+            if not IsValid(b) then continue end
+            if b:GetEnemy() ~= self then continue end
+            b:Fire("LetGo", nil, 0, self, self)
+        end
     end
 
     function plymeta:PossumRevive()
@@ -132,7 +142,7 @@ if SERVER then
         self:SetPos(self.possumRagdoll:GetPos())
         self:SetVelocity(self.possumRagdoll:GetVelocity())
         local yaw = self.possumRagdoll:GetAngles().yaw
-		self:SetAngles(Angle(0, yaw, 0))
+        self:SetAngles(Angle(0, yaw, 0))
         self:SetModel(self.possumRagdoll:GetModel())
         self:SetPlayerColor(self.possumRagdoll.playerColor)
 
