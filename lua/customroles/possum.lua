@@ -68,7 +68,7 @@ if SERVER then
         if IsValid(self.possumRagdoll) then return end
 
         self:SetNWBool("PossumDisguiseRunning", true)
-        self:SelectWeapon("weapon_psm_disguiser")
+        self:SetActiveWeapon(self:GetWeapon("weapon_psm_disguiser"))
 
         -- Create ragdoll and lock their view
         local ragdoll = ents.Create("prop_ragdoll")
