@@ -179,6 +179,8 @@ if SERVER then
         end
         rag.playerHealth = rag.playerHealth - damage
 
+        util.StartBleeding(rag, damage, 5)
+
         -- Kill the player if they run out of health
         if rag.playerHealth <= 0 then
             ply:PossumRevive()
