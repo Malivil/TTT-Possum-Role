@@ -235,7 +235,7 @@ if SERVER then
         -- Transfer possum damage from the ragdoll to the real player
         if IsRagdoll(rag) then
             TransferRagdollDamage(rag, dmginfo)
-        else
+        elseif not ply.IsRoleAbilityDisabled or not ply:IsRoleAbilityDisabled() then
             ply:PossumPlayDead()
         end
     end)
