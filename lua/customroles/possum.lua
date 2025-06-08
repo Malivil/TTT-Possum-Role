@@ -65,6 +65,17 @@ if SERVER then
 
     local plymeta = FindMetaTable("Player")
     function plymeta:PossumPlayDead()
+        if not self:IsPossum() then return end
+
+        -- TODO: Cleanup after release
+        if CRVersion("2.3.2") then
+            if self.in_ragdoll then return end
+            self:SetNWBool("PossumDisguiseRunning", true)
+            self:SetActiveWeapon(self:GetWeapon("weapon_psm_disguiser"))
+            self:Ragdoll(0, true, true)
+            return
+        end
+
         if IsValid(self.possumRagdoll) then return end
 
         self:SetNWBool("PossumDisguiseRunning", true)
@@ -124,6 +135,16 @@ if SERVER then
     end
 
     function plymeta:PossumRevive()
+        if not self:IsPossum() then return end
+
+        -- TODO: Cleanup after release
+        if CRVersion("2.3.2") then
+            if not self.in_ragdoll then return end
+            self:SetNWBool("PossumDisguiseRunning", false)
+            self:UnRagdoll()
+            return
+        end
+
         if not IsValid(self.possumRagdoll) then return end
 
         self:SetNWBool("PossumDisguiseRunning", false)
@@ -219,6 +240,7 @@ if SERVER then
         -- Don't transfer damage from jester-like players
         if att:ShouldActLikeJester() then return end
 
+        -- TODO: Cleanup after release
         local ply, rag
         if IsRagdoll(ent) then
             rag = ent
