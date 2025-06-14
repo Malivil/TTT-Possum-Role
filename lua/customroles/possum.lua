@@ -72,7 +72,10 @@ if SERVER then
             if self.in_ragdoll then return end
             self:SetNWBool("PossumDisguiseRunning", true)
             self:SetActiveWeapon(self:GetWeapon("weapon_psm_disguiser"))
-            self:Ragdoll(0, true, true)
+            local rag = self:Ragdoll(0, true, true)
+            if IsValid(rag) then
+                rag.damage_resist = possum_damage_resist:GetFloat()
+            end
             return
         end
 
