@@ -66,211 +66,47 @@ if SERVER then
     local plymeta = FindMetaTable("Player")
     function plymeta:PossumPlayDead()
         if not self:IsPossum() then return end
-
-        -- TODO: Cleanup after release
-        if CRVersion("2.3.2") then
-            if self.in_ragdoll then return end
-            self:SetNWBool("PossumDisguiseRunning", true)
-            self:SetActiveWeapon(self:GetWeapon("weapon_psm_disguiser"))
-            local rag = self:Ragdoll(0, true, true)
-            if IsValid(rag) then
-                rag.damage_resist = possum_damage_resist:GetFloat()
-            end
-            return
-        end
-
-        if IsValid(self.possumRagdoll) then return end
+        if self.in_ragdoll then return end
 
         self:SetNWBool("PossumDisguiseRunning", true)
         self:SetActiveWeapon(self:GetWeapon("weapon_psm_disguiser"))
-
-        -- Create ragdoll and lock their view
-        local ragdoll = ents.Create("prop_ragdoll")
-        ragdoll.ragdolledPly = self
-        ragdoll.playerHealth = self:Health()
-        ragdoll.playerColor = self:GetPlayerColor()
-        -- Don't let the red matter bomb destroy this ragdoll
-        ragdoll.WYOZIBHDontEat = true
-
-        local velocity = self:GetVelocity()
-        ragdoll:SetPos(self:GetPos())
-        ragdoll:SetModel(self:GetModel())
-        ragdoll:SetSkin(self:GetSkin())
-        for _, value in pairs(self:GetBodyGroups()) do
-            ragdoll:SetBodygroup(value.id, self:GetBodygroup(value.id))
-        end
-        ragdoll:SetAngles(self:GetAngles())
-        ragdoll:SetColor(self:GetColor())
-        CORPSE.SetPlayerNick(ragdoll, self)
-        ragdoll:Spawn()
-        ragdoll:Activate()
-
-        local rag_collide = GetConVar("ttt_ragdoll_collide")
-        ragdoll:SetCollisionGroup(rag_collide:GetBool() and COLLISION_GROUP_WEAPON or COLLISION_GROUP_DEBRIS_TRIGGER)
-
-        -- So their player ent will match up (position-wise) with where their ragdoll is.
-        self:SetParent(ragdoll)
-        -- Set velocity for each piece of the ragdoll
-        for i = 1, ragdoll:GetPhysicsObjectCount() do
-            local phys_obj = ragdoll:GetPhysicsObjectNum(i)
-            if phys_obj then
-                phys_obj:SetVelocity(velocity)
-            end
-        end
-
-        self.possumRagdoll = ragdoll
-        self:Spectate(OBS_MODE_CHASE)
-        self:SpectateEntity(ragdoll)
-
-        -- The disguiser stays in their hand so hide it from view
-        self:DrawViewModel(false)
-        self:DrawWorldModel(false)
-
-        -- If there is a barnacle holding this player, tell it to let go
-        -- We do this so the player doesn't get stuck in a partial capture state
-        -- where they are taking damage from the barnacle even they have revived
-        -- and moved away
-        for _, b in ipairs(ents.FindByClass("npc_barnacle")) do
-            if not IsValid(b) then continue end
-            if b:GetEnemy() ~= self then continue end
-            b:Fire("LetGo", nil, 0, self, self)
+        local rag = self:Ragdoll(0, true, true)
+        if IsValid(rag) then
+            rag.damage_resist = possum_damage_resist:GetFloat()
         end
     end
 
     function plymeta:PossumRevive()
         if not self:IsPossum() then return end
-
-        -- TODO: Cleanup after release
-        if CRVersion("2.3.2") then
-            if not self.in_ragdoll then return end
-            self:SetNWBool("PossumDisguiseRunning", false)
-            self:UnRagdoll()
-            return
-        end
-
-        if not IsValid(self.possumRagdoll) then return end
+        if not self.in_ragdoll then return end
 
         self:SetNWBool("PossumDisguiseRunning", false)
-
-        -- Save these things in case something like a Randomat has changed them
-        -- We'll restore them later since the `Spawn` call resets these flags to their default
-        local jumpPower = self:GetJumpPower()
-        local walkSpeed = self:GetWalkSpeed()
-        local maxHealth = self:GetMaxHealth()
-
-        -- Unragdoll
-        self:SpectateEntity(nil)
-        self:UnSpectate()
-        self:SetParent()
-        self:Spawn()
-        self:SetPos(self.possumRagdoll:GetPos())
-        self:SetVelocity(self.possumRagdoll:GetVelocity())
-        local yaw = self.possumRagdoll:GetAngles().yaw
-        self:SetAngles(Angle(0, yaw, 0))
-        self:SetModel(self.possumRagdoll:GetModel())
-        self:SetPlayerColor(self.possumRagdoll.playerColor)
-
-        -- Let weapons be seen again
-        self:DrawViewModel(true)
-        self:DrawWorldModel(true)
-
-        local newhealth = self.possumRagdoll.playerHealth
-        if newhealth <= 0 then
-            newhealth = 1
-        end
-        self:SetHealth(newhealth)
-
-        -- Restore potentially-changed values
-        self:SetWalkSpeed(walkSpeed)
-        self:SetJumpPower(jumpPower)
-        self:SetMaxHealth(maxHealth)
-
-        SafeRemoveEntity(self.possumRagdoll)
-        self.possumRagdoll = nil
-    end
-
-    local function TransferRagdollDamage(rag, dmginfo)
-        if not IsRagdoll(rag) then return end
-        local ply = rag.ragdolledPly
-        if not IsPlayer(ply) or not ply:Alive() or ply:IsSpec() then return end
-
-        -- Keep track of how much health they have left
-        local damage = dmginfo:GetDamage()
-        -- Apply damage resistance, if it's enabled
-        local damage_resist = possum_damage_resist:GetFloat()
-        if damage_resist > 0 then
-            damage = damage - (damage * damage_resist)
-        end
-        rag.playerHealth = rag.playerHealth - damage
-
-        util.StartBleeding(rag, damage, 5)
-
-        -- Kill the player if they run out of health
-        if rag.playerHealth <= 0 then
-            ply:PossumRevive()
-            -- Disable the disguise so they don't just ragdoll again
-            ply:SetNWBool("PossumDisguiseActive", false)
-
-            local att = dmginfo:GetAttacker()
-            local inflictor = dmginfo:GetInflictor()
-            if not IsValid(inflictor) then
-                inflictor = att
-            end
-            local dmg_type = dmginfo:GetDamageType()
-
-            -- Use TakeDamage instead of Kill so it properly applies karma
-            local dmg = DamageInfo()
-            dmg:SetDamageType(dmg_type)
-            dmg:SetAttacker(att)
-            dmg:SetInflictor(inflictor)
-            -- Use 10 so damage scaling doesn't mess with it. The worse damage factor (0.1) will still deal 1 damage after scaling a 10 down
-            -- Karma ignores excess damage anyway
-            dmg:SetDamage(10)
-            dmg:SetDamageForce(Vector(0, 0, 1))
-
-            ply:TakeDamageInfo(dmg)
-        else
-            ply:SetHealth(rag.playerHealth)
-        end
+        self:UnRagdoll()
     end
 
     hook.Add("PostEntityTakeDamage", "Possum_PostEntityTakeDamage", function(ent, dmginfo, taken)
         if not taken then return end
+        if not IsPlayer(ent) then return end
+        if not ent:Alive() or ent:IsSpec() or not ent:IsPossum() then return end
+        if not ent:GetNWBool("PossumDisguiseActive", false) then return end
 
         local att = dmginfo:GetAttacker()
         if not IsPlayer(att) then return end
+        if att == ent then return end
 
-        -- Don't transfer damage from jester-like players
+        -- Ignore damage from jester-like players
         if att:ShouldActLikeJester() then return end
 
-        -- TODO: Cleanup after release
-        local ply, rag
-        if IsRagdoll(ent) then
-            rag = ent
-            ply = ent.ragdolledPly
-        elseif IsPlayer(ent) then
-            ply = ent
-            rag = ent.possumRagdoll
-        end
+        -- If the possum is disabled, don't do anything
+        if ent:IsRoleAbilityDisabled() then return end
 
-        if not IsPlayer(ply) or not ply:Alive() or ply:IsSpec() or not ply:IsPossum() then return end
-        if not ply:GetNWBool("PossumDisguiseActive", false) then return end
-        if att == ply then return end
-
-        -- Transfer possum damage from the ragdoll to the real player
-        if IsRagdoll(rag) then
-            TransferRagdollDamage(rag, dmginfo)
-        elseif not ply:IsRoleAbilityDisabled() then
-            ply:PossumPlayDead()
-        end
+        ent:PossumPlayDead()
     end)
 
     -- Clear possum data when it's no longer relevant
     local function ClearPossumData(ply)
         ply:SetNWBool("PossumDisguiseActive", false)
         ply:SetNWBool("PossumDisguiseRunning", false)
-        SafeRemoveEntity(ply.possumRagdoll)
-        ply.possumRagdoll = nil
     end
 
     hook.Add("TTTPrepareRound", "Possum_PrepareRound", function()
