@@ -1,6 +1,10 @@
+local hook = hook
 local player = player
+local table = table
 
+local AddHook = hook.Add
 local PlayerIterator = player.Iterator
+local TableInsert = table.insert
 
 local ROLE = {}
 
@@ -34,29 +38,29 @@ ROLE.translations = {
     }
 }
 
-ROLE.convars = {}
-table.insert(ROLE.convars, {
-    cvar = "ttt_possum_disguiser_drain",
-    type = ROLE_CONVAR_TYPE_NUM,
-    decimal = 2
-})
-table.insert(ROLE.convars, {
-    cvar = "ttt_possum_disguiser_recharge",
-    type = ROLE_CONVAR_TYPE_NUM,
-    decimal = 2
-})
-table.insert(ROLE.convars, {
-    cvar = "ttt_possum_damage_resist",
-    type = ROLE_CONVAR_TYPE_NUM,
-    decimal = 2
-})
-table.insert(ROLE.convars, {
-    cvar = "ttt_possum_disguiser_uses",
-    type = ROLE_CONVAR_TYPE_NUM,
-    decimal = 0
-})
+ROLE.convars = {
+    {
+        cvar = "ttt_possum_disguiser_drain",
+        type = ROLE_CONVAR_TYPE_NUM,
+        decimal = 2
+    },
+    {
+        cvar = "ttt_possum_disguiser_recharge",
+        type = ROLE_CONVAR_TYPE_NUM,
+        decimal = 2
+    },
+    {
+        cvar = "ttt_possum_damage_resist",
+        type = ROLE_CONVAR_TYPE_NUM,
+        decimal = 2
+    },
+    {
+        cvar = "ttt_possum_disguiser_uses",
+        type = ROLE_CONVAR_TYPE_NUM,
+        decimal = 0
+    }
+}
 
-RegisterRole(ROLE)
 
 if SERVER then
     AddCSLuaFile()
@@ -84,7 +88,7 @@ if SERVER then
         self:UnRagdoll()
     end
 
-    hook.Add("PostEntityTakeDamage", "Possum_PostEntityTakeDamage", function(ent, dmginfo, taken)
+    local function Possum_PostEntityTakeDamage(ent, dmginfo, taken)
         if not taken then return end
         if not IsPlayer(ent) then return end
         if not ent:Alive() or ent:IsSpec() or not ent:IsPossum() then return end
@@ -101,7 +105,7 @@ if SERVER then
         if ent:IsRoleAbilityDisabled() then return end
 
         ent:PossumPlayDead()
-    end)
+    end
 
     -- Clear possum data when it's no longer relevant
     local function ClearPossumData(ply)
@@ -109,23 +113,35 @@ if SERVER then
         ply:SetNWBool("PossumDisguiseRunning", false)
     end
 
-    hook.Add("TTTPrepareRound", "Possum_PrepareRound", function()
+    AddHook("TTTPrepareRound", "Possum_PrepareRound", function()
         for _, v in PlayerIterator() do
             ClearPossumData(v)
         end
     end)
 
-    hook.Add("TTTPlayerRoleChanged", "Possum_TTTPlayerRoleChanged", function(ply, oldRole, newRole)
+    AddHook("TTTPlayerRoleChanged", "Possum_TTTPlayerRoleChanged", function(ply, oldRole, newRole)
         ClearPossumData(ply)
     end)
 
-    hook.Add("PlayerDeath", "Possum_KillCheck_PlayerDeath", function(victim, infl, attacker)
+    local function Possum_KillCheck_PlayerDeath(victim, infl, attacker)
         if not IsPlayer(victim) or not victim:IsPossum() then return end
         ClearPossumData(victim)
-    end)
+    end
+
+    ------------------
+    -- REGISTRATION --
+    ------------------
+
+    ROLE.registeredhooks = {
+        ["PlayerDeath"] = Possum_KillCheck_PlayerDeath,
+        ["PostEntityTakeDamage"] = Possum_PostEntityTakeDamage
+    }
 end
 
 if CLIENT then
+    local draw = draw
+    local surface = surface
+
     surface.CreateFont("PSMTimeLeft", {
         font = "Trebuchet24",
         size = 22,
@@ -133,7 +149,7 @@ if CLIENT then
     })
 
     -- Show a message when the death disguiser is enabled
-    hook.Add("TTTHUDInfoPaint", "Possum_TTTHUDInfoPaint", function(client, label_left, label_top, active_labels)
+    local function Possum_TTTHUDInfoPaint(client, label_left, label_top, active_labels)
         if not IsPlayer(client) or not client:Alive() or client:IsSpec() or not client:IsPossum() then return end
         if not client:GetNWBool("PossumDisguiseActive", false) then return end
 
@@ -155,9 +171,9 @@ if CLIENT then
 
         -- Track that the label was added so others can position accurately
         if active_labels then
-            table.insert(active_labels, "possum")
+            TableInsert(active_labels, "possum")
         end
-    end)
+    end
 
     -- Disguise time progress bar
     local margin = 10
@@ -168,7 +184,7 @@ if CLIENT then
         background = Color(30, 60, 100, 222),
         fill = Color(75, 150, 255, 255)
     }
-    hook.Add("HUDPaint", "Possum_HUDPaint", function()
+    local function Possum_HUDPaint()
         local client = LocalPlayer()
         if not IsPlayer(client) then return end
 
@@ -186,9 +202,9 @@ if CLIENT then
                 draw.SimpleText(LANG.GetParamTranslation("psm_disguiser_charge_info", { secondaryfire = Key("+attack2", "MOUSE2")}), "TabLarge", ScrW() / 2, margin, COLOR_WHITE, TEXT_ALIGN_CENTER)
             end
         end
-    end)
+    end
 
-    hook.Add("TTTScoreGroup", "Possum_TTTScoreGroup", function(ply)
+    local function Possum_TTTScoreGroup(ply)
         if not IsPlayer(ply) or not ply:IsPossum() then return end
         if not ply:Alive() or ply:IsSpec() then return end
 
@@ -205,10 +221,10 @@ if CLIENT then
                 ((GAMEMODE.round_state ~= ROUND_ACTIVE) and client:IsTerror()) then
             return GROUP_NOTFOUND
         end
-    end)
+    end
 
     -- Tutorial
-    hook.Add("TTTTutorialRoleText", "Possum_TTTTutorialRoleText", function(role, titleLabel)
+    AddHook("TTTTutorialRoleText", "Possum_TTTTutorialRoleText", function(role, titleLabel)
         if role == ROLE_POSSUM then
             local roleColor = ROLE_COLORS[ROLE_INNOCENT]
             local html = "The " .. ROLE_STRINGS[ROLE_POSSUM] .. " is a member of the <span style='color: rgb(" .. roleColor.r .. ", " .. roleColor.g .. ", " .. roleColor.b .. ")'>innocent team</span> whose goal is to protect themselves and help their team win."
@@ -220,4 +236,16 @@ if CLIENT then
             return html
         end
     end)
+
+    ------------------
+    -- REGISTRATION --
+    ------------------
+
+    ROLE.registeredhooks = {
+        ["HUDPaint"] = Possum_HUDPaint,
+        ["TTTHUDInfoPaint"] = Possum_TTTHUDInfoPaint,
+        ["TTTScoreGroup"] = Possum_TTTScoreGroup
+    }
 end
+
+RegisterRole(ROLE)
